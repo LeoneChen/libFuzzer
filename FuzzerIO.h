@@ -92,7 +92,7 @@ bool IsSeparator(char C);
 // Similar to the basename utility: returns the file name w/o the dir prefix.
 std::string Basename(const std::string &Path);
 
-FILE* OpenFile(int Fd, const char *Mode);
+FILE *OpenFile(int Fd, const char *Mode);
 
 int CloseFile(int Fd);
 
@@ -108,6 +108,6 @@ void RmDir(const std::string &Path);
 
 const std::string &getDevNull();
 
-}  // namespace fuzzer
+} // namespace fuzzer
 
-#endif  // LLVM_FUZZER_IO_H
+#endif // LLVM_FUZZER_IO_H

@@ -24,7 +24,8 @@
 using namespace fuzzer;
 
 // For now, have LLVMFuzzerTestOneInput just to make it link.
-// Later we may want to make unittests that actually call LLVMFuzzerTestOneInput.
+// Later we may want to make unittests that actually call
+// LLVMFuzzerTestOneInput.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   abort();
 }
@@ -51,42 +52,40 @@ TEST(Fuzzer, CrossOver) {
   std::unique_ptr<MutationDispatcher> MD(new MutationDispatcher(Rand, {}));
   Unit A({0, 1, 2}), B({5, 6, 7});
   Unit C;
-  Unit Expected[] = {
-       { 0 },
-       { 0, 1 },
-       { 0, 5 },
-       { 0, 1, 2 },
-       { 0, 1, 5 },
-       { 0, 5, 1 },
-       { 0, 5, 6 },
-       { 0, 1, 2, 5 },
-       { 0, 1, 5, 2 },
-       { 0, 1, 5, 6 },
-       { 0, 5, 1, 2 },
-       { 0, 5, 1, 6 },
-       { 0, 5, 6, 1 },
-       { 0, 5, 6, 7 },
-       { 0, 1, 2, 5, 6 },
-       { 0, 1, 5, 2, 6 },
-       { 0, 1, 5, 6, 2 },
-       { 0, 1, 5, 6, 7 },
-       { 0, 5, 1, 2, 6 },
-       { 0, 5, 1, 6, 2 },
-       { 0, 5, 1, 6, 7 },
-       { 0, 5, 6, 1, 2 },
-       { 0, 5, 6, 1, 7 },
-       { 0, 5, 6, 7, 1 },
-       { 0, 1, 2, 5, 6, 7 },
-       { 0, 1, 5, 2, 6, 7 },
-       { 0, 1, 5, 6, 2, 7 },
-       { 0, 1, 5, 6, 7, 2 },
-       { 0, 5, 1, 2, 6, 7 },
-       { 0, 5, 1, 6, 2, 7 },
-       { 0, 5, 1, 6, 7, 2 },
-       { 0, 5, 6, 1, 2, 7 },
-       { 0, 5, 6, 1, 7, 2 },
-       { 0, 5, 6, 7, 1, 2 }
-  };
+  Unit Expected[] = {{0},
+                     {0, 1},
+                     {0, 5},
+                     {0, 1, 2},
+                     {0, 1, 5},
+                     {0, 5, 1},
+                     {0, 5, 6},
+                     {0, 1, 2, 5},
+                     {0, 1, 5, 2},
+                     {0, 1, 5, 6},
+                     {0, 5, 1, 2},
+                     {0, 5, 1, 6},
+                     {0, 5, 6, 1},
+                     {0, 5, 6, 7},
+                     {0, 1, 2, 5, 6},
+                     {0, 1, 5, 2, 6},
+                     {0, 1, 5, 6, 2},
+                     {0, 1, 5, 6, 7},
+                     {0, 5, 1, 2, 6},
+                     {0, 5, 1, 6, 2},
+                     {0, 5, 1, 6, 7},
+                     {0, 5, 6, 1, 2},
+                     {0, 5, 6, 1, 7},
+                     {0, 5, 6, 7, 1},
+                     {0, 1, 2, 5, 6, 7},
+                     {0, 1, 5, 2, 6, 7},
+                     {0, 1, 5, 6, 2, 7},
+                     {0, 1, 5, 6, 7, 2},
+                     {0, 5, 1, 2, 6, 7},
+                     {0, 5, 1, 6, 2, 7},
+                     {0, 5, 1, 6, 7, 2},
+                     {0, 5, 6, 1, 2, 7},
+                     {0, 5, 6, 1, 7, 2},
+                     {0, 5, 6, 7, 1, 2}};
   for (size_t Len = 1; Len < 8; Len++) {
     Set<Unit> FoundUnits, ExpectedUnitsWitThisLength;
     for (int Iter = 0; Iter < 3000; Iter++) {
@@ -134,29 +133,42 @@ void TestEraseBytes(Mutator M, int NumIter) {
   uint8_t REM12[5] = {0x00, 0x11, 0x22, 0x33, 0x44};
   uint8_t REM13[5] = {0x00, 0x44, 0x55, 0x66, 0x77};
 
-
   Random Rand(0);
   std::unique_ptr<MutationDispatcher> MD(new MutationDispatcher(Rand, {}));
   int FoundMask = 0;
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
     size_t NewSize = (*MD.*M)(T, sizeof(T), sizeof(T));
-    if (NewSize == 7 && !memcmp(REM0, T, 7)) FoundMask |= 1 << 0;
-    if (NewSize == 7 && !memcmp(REM1, T, 7)) FoundMask |= 1 << 1;
-    if (NewSize == 7 && !memcmp(REM2, T, 7)) FoundMask |= 1 << 2;
-    if (NewSize == 7 && !memcmp(REM3, T, 7)) FoundMask |= 1 << 3;
-    if (NewSize == 7 && !memcmp(REM4, T, 7)) FoundMask |= 1 << 4;
-    if (NewSize == 7 && !memcmp(REM5, T, 7)) FoundMask |= 1 << 5;
-    if (NewSize == 7 && !memcmp(REM6, T, 7)) FoundMask |= 1 << 6;
-    if (NewSize == 7 && !memcmp(REM7, T, 7)) FoundMask |= 1 << 7;
+    if (NewSize == 7 && !memcmp(REM0, T, 7))
+      FoundMask |= 1 << 0;
+    if (NewSize == 7 && !memcmp(REM1, T, 7))
+      FoundMask |= 1 << 1;
+    if (NewSize == 7 && !memcmp(REM2, T, 7))
+      FoundMask |= 1 << 2;
+    if (NewSize == 7 && !memcmp(REM3, T, 7))
+      FoundMask |= 1 << 3;
+    if (NewSize == 7 && !memcmp(REM4, T, 7))
+      FoundMask |= 1 << 4;
+    if (NewSize == 7 && !memcmp(REM5, T, 7))
+      FoundMask |= 1 << 5;
+    if (NewSize == 7 && !memcmp(REM6, T, 7))
+      FoundMask |= 1 << 6;
+    if (NewSize == 7 && !memcmp(REM7, T, 7))
+      FoundMask |= 1 << 7;
 
-    if (NewSize == 6 && !memcmp(REM8, T, 6)) FoundMask |= 1 << 8;
-    if (NewSize == 6 && !memcmp(REM9, T, 6)) FoundMask |= 1 << 9;
-    if (NewSize == 6 && !memcmp(REM10, T, 6)) FoundMask |= 1 << 10;
+    if (NewSize == 6 && !memcmp(REM8, T, 6))
+      FoundMask |= 1 << 8;
+    if (NewSize == 6 && !memcmp(REM9, T, 6))
+      FoundMask |= 1 << 9;
+    if (NewSize == 6 && !memcmp(REM10, T, 6))
+      FoundMask |= 1 << 10;
 
-    if (NewSize == 5 && !memcmp(REM11, T, 5)) FoundMask |= 1 << 11;
-    if (NewSize == 5 && !memcmp(REM12, T, 5)) FoundMask |= 1 << 12;
-    if (NewSize == 5 && !memcmp(REM13, T, 5)) FoundMask |= 1 << 13;
+    if (NewSize == 5 && !memcmp(REM11, T, 5))
+      FoundMask |= 1 << 11;
+    if (NewSize == 5 && !memcmp(REM12, T, 5))
+      FoundMask |= 1 << 12;
+    if (NewSize == 5 && !memcmp(REM13, T, 5))
+      FoundMask |= 1 << 13;
   }
   EXPECT_EQ(FoundMask, (1 << 14) - 1);
 }
@@ -185,14 +197,22 @@ void TestInsertByte(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
     size_t NewSize = (*MD.*M)(T, 7, 8);
-    if (NewSize == 8 && !memcmp(INS0, T, 8)) FoundMask |= 1 << 0;
-    if (NewSize == 8 && !memcmp(INS1, T, 8)) FoundMask |= 1 << 1;
-    if (NewSize == 8 && !memcmp(INS2, T, 8)) FoundMask |= 1 << 2;
-    if (NewSize == 8 && !memcmp(INS3, T, 8)) FoundMask |= 1 << 3;
-    if (NewSize == 8 && !memcmp(INS4, T, 8)) FoundMask |= 1 << 4;
-    if (NewSize == 8 && !memcmp(INS5, T, 8)) FoundMask |= 1 << 5;
-    if (NewSize == 8 && !memcmp(INS6, T, 8)) FoundMask |= 1 << 6;
-    if (NewSize == 8 && !memcmp(INS7, T, 8)) FoundMask |= 1 << 7;
+    if (NewSize == 8 && !memcmp(INS0, T, 8))
+      FoundMask |= 1 << 0;
+    if (NewSize == 8 && !memcmp(INS1, T, 8))
+      FoundMask |= 1 << 1;
+    if (NewSize == 8 && !memcmp(INS2, T, 8))
+      FoundMask |= 1 << 2;
+    if (NewSize == 8 && !memcmp(INS3, T, 8))
+      FoundMask |= 1 << 3;
+    if (NewSize == 8 && !memcmp(INS4, T, 8))
+      FoundMask |= 1 << 4;
+    if (NewSize == 8 && !memcmp(INS5, T, 8))
+      FoundMask |= 1 << 5;
+    if (NewSize == 8 && !memcmp(INS6, T, 8))
+      FoundMask |= 1 << 6;
+    if (NewSize == 8 && !memcmp(INS7, T, 8))
+      FoundMask |= 1 << 7;
   }
   EXPECT_EQ(FoundMask, 255);
 }
@@ -225,24 +245,34 @@ void TestInsertRepeatedBytes(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[8] = {0x00, 0x11, 0x22, 0x33};
     size_t NewSize = (*MD.*M)(T, 4, 8);
-    if (NewSize == 7 && !memcmp(INS0, T, 7)) FoundMask |= 1 << 0;
-    if (NewSize == 7 && !memcmp(INS1, T, 7)) FoundMask |= 1 << 1;
-    if (NewSize == 7 && !memcmp(INS2, T, 7)) FoundMask |= 1 << 2;
-    if (NewSize == 7 && !memcmp(INS3, T, 7)) FoundMask |= 1 << 3;
-    if (NewSize == 7 && !memcmp(INS4, T, 7)) FoundMask |= 1 << 4;
+    if (NewSize == 7 && !memcmp(INS0, T, 7))
+      FoundMask |= 1 << 0;
+    if (NewSize == 7 && !memcmp(INS1, T, 7))
+      FoundMask |= 1 << 1;
+    if (NewSize == 7 && !memcmp(INS2, T, 7))
+      FoundMask |= 1 << 2;
+    if (NewSize == 7 && !memcmp(INS3, T, 7))
+      FoundMask |= 1 << 3;
+    if (NewSize == 7 && !memcmp(INS4, T, 7))
+      FoundMask |= 1 << 4;
 
-    if (NewSize == 8 && !memcmp(INS5, T, 8)) FoundMask |= 1 << 5;
-    if (NewSize == 8 && !memcmp(INS6, T, 8)) FoundMask |= 1 << 6;
-    if (NewSize == 8 && !memcmp(INS7, T, 8)) FoundMask |= 1 << 7;
-    if (NewSize == 8 && !memcmp(INS8, T, 8)) FoundMask |= 1 << 8;
-    if (NewSize == 8 && !memcmp(INS9, T, 8)) FoundMask |= 1 << 9;
-
+    if (NewSize == 8 && !memcmp(INS5, T, 8))
+      FoundMask |= 1 << 5;
+    if (NewSize == 8 && !memcmp(INS6, T, 8))
+      FoundMask |= 1 << 6;
+    if (NewSize == 8 && !memcmp(INS7, T, 8))
+      FoundMask |= 1 << 7;
+    if (NewSize == 8 && !memcmp(INS8, T, 8))
+      FoundMask |= 1 << 8;
+    if (NewSize == 8 && !memcmp(INS9, T, 8))
+      FoundMask |= 1 << 9;
   }
   EXPECT_EQ(FoundMask, (1 << 10) - 1);
 }
 
 TEST(FuzzerMutate, InsertRepeatedBytes1) {
-  TestInsertRepeatedBytes(&MutationDispatcher::Mutate_InsertRepeatedBytes, 10000);
+  TestInsertRepeatedBytes(&MutationDispatcher::Mutate_InsertRepeatedBytes,
+                          10000);
 }
 TEST(FuzzerMutate, InsertRepeatedBytes2) {
   TestInsertRepeatedBytes(&MutationDispatcher::Mutate, 300000);
@@ -265,14 +295,22 @@ void TestChangeByte(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[9] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
     size_t NewSize = (*MD.*M)(T, 8, 9);
-    if (NewSize == 8 && !memcmp(CH0, T, 8)) FoundMask |= 1 << 0;
-    if (NewSize == 8 && !memcmp(CH1, T, 8)) FoundMask |= 1 << 1;
-    if (NewSize == 8 && !memcmp(CH2, T, 8)) FoundMask |= 1 << 2;
-    if (NewSize == 8 && !memcmp(CH3, T, 8)) FoundMask |= 1 << 3;
-    if (NewSize == 8 && !memcmp(CH4, T, 8)) FoundMask |= 1 << 4;
-    if (NewSize == 8 && !memcmp(CH5, T, 8)) FoundMask |= 1 << 5;
-    if (NewSize == 8 && !memcmp(CH6, T, 8)) FoundMask |= 1 << 6;
-    if (NewSize == 8 && !memcmp(CH7, T, 8)) FoundMask |= 1 << 7;
+    if (NewSize == 8 && !memcmp(CH0, T, 8))
+      FoundMask |= 1 << 0;
+    if (NewSize == 8 && !memcmp(CH1, T, 8))
+      FoundMask |= 1 << 1;
+    if (NewSize == 8 && !memcmp(CH2, T, 8))
+      FoundMask |= 1 << 2;
+    if (NewSize == 8 && !memcmp(CH3, T, 8))
+      FoundMask |= 1 << 3;
+    if (NewSize == 8 && !memcmp(CH4, T, 8))
+      FoundMask |= 1 << 4;
+    if (NewSize == 8 && !memcmp(CH5, T, 8))
+      FoundMask |= 1 << 5;
+    if (NewSize == 8 && !memcmp(CH6, T, 8))
+      FoundMask |= 1 << 6;
+    if (NewSize == 8 && !memcmp(CH7, T, 8))
+      FoundMask |= 1 << 7;
   }
   EXPECT_EQ(FoundMask, 255);
 }
@@ -301,14 +339,22 @@ void TestChangeBit(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[9] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
     size_t NewSize = (*MD.*M)(T, 8, 9);
-    if (NewSize == 8 && !memcmp(CH0, T, 8)) FoundMask |= 1 << 0;
-    if (NewSize == 8 && !memcmp(CH1, T, 8)) FoundMask |= 1 << 1;
-    if (NewSize == 8 && !memcmp(CH2, T, 8)) FoundMask |= 1 << 2;
-    if (NewSize == 8 && !memcmp(CH3, T, 8)) FoundMask |= 1 << 3;
-    if (NewSize == 8 && !memcmp(CH4, T, 8)) FoundMask |= 1 << 4;
-    if (NewSize == 8 && !memcmp(CH5, T, 8)) FoundMask |= 1 << 5;
-    if (NewSize == 8 && !memcmp(CH6, T, 8)) FoundMask |= 1 << 6;
-    if (NewSize == 8 && !memcmp(CH7, T, 8)) FoundMask |= 1 << 7;
+    if (NewSize == 8 && !memcmp(CH0, T, 8))
+      FoundMask |= 1 << 0;
+    if (NewSize == 8 && !memcmp(CH1, T, 8))
+      FoundMask |= 1 << 1;
+    if (NewSize == 8 && !memcmp(CH2, T, 8))
+      FoundMask |= 1 << 2;
+    if (NewSize == 8 && !memcmp(CH3, T, 8))
+      FoundMask |= 1 << 3;
+    if (NewSize == 8 && !memcmp(CH4, T, 8))
+      FoundMask |= 1 << 4;
+    if (NewSize == 8 && !memcmp(CH5, T, 8))
+      FoundMask |= 1 << 5;
+    if (NewSize == 8 && !memcmp(CH6, T, 8))
+      FoundMask |= 1 << 6;
+    if (NewSize == 8 && !memcmp(CH7, T, 8))
+      FoundMask |= 1 << 7;
   }
   EXPECT_EQ(FoundMask, 255);
 }
@@ -334,11 +380,16 @@ void TestShuffleBytes(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[7] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
     size_t NewSize = (*MD.*M)(T, 7, 7);
-    if (NewSize == 7 && !memcmp(CH0, T, 7)) FoundMask |= 1 << 0;
-    if (NewSize == 7 && !memcmp(CH1, T, 7)) FoundMask |= 1 << 1;
-    if (NewSize == 7 && !memcmp(CH2, T, 7)) FoundMask |= 1 << 2;
-    if (NewSize == 7 && !memcmp(CH3, T, 7)) FoundMask |= 1 << 3;
-    if (NewSize == 7 && !memcmp(CH4, T, 7)) FoundMask |= 1 << 4;
+    if (NewSize == 7 && !memcmp(CH0, T, 7))
+      FoundMask |= 1 << 0;
+    if (NewSize == 7 && !memcmp(CH1, T, 7))
+      FoundMask |= 1 << 1;
+    if (NewSize == 7 && !memcmp(CH2, T, 7))
+      FoundMask |= 1 << 2;
+    if (NewSize == 7 && !memcmp(CH3, T, 7))
+      FoundMask |= 1 << 3;
+    if (NewSize == 7 && !memcmp(CH4, T, 7))
+      FoundMask |= 1 << 4;
   }
   EXPECT_EQ(FoundMask, 31);
 }
@@ -365,11 +416,16 @@ void TestCopyPart(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[7] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
     size_t NewSize = (*MD.*M)(T, 7, 7);
-    if (NewSize == 7 && !memcmp(CH0, T, 7)) FoundMask |= 1 << 0;
-    if (NewSize == 7 && !memcmp(CH1, T, 7)) FoundMask |= 1 << 1;
-    if (NewSize == 7 && !memcmp(CH2, T, 7)) FoundMask |= 1 << 2;
-    if (NewSize == 7 && !memcmp(CH3, T, 7)) FoundMask |= 1 << 3;
-    if (NewSize == 7 && !memcmp(CH4, T, 7)) FoundMask |= 1 << 4;
+    if (NewSize == 7 && !memcmp(CH0, T, 7))
+      FoundMask |= 1 << 0;
+    if (NewSize == 7 && !memcmp(CH1, T, 7))
+      FoundMask |= 1 << 1;
+    if (NewSize == 7 && !memcmp(CH2, T, 7))
+      FoundMask |= 1 << 2;
+    if (NewSize == 7 && !memcmp(CH3, T, 7))
+      FoundMask |= 1 << 3;
+    if (NewSize == 7 && !memcmp(CH4, T, 7))
+      FoundMask |= 1 << 4;
   }
 
   uint8_t CH5[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x00, 0x11, 0x22};
@@ -381,11 +437,16 @@ void TestCopyPart(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
     size_t NewSize = (*MD.*M)(T, 5, 8);
-    if (NewSize == 8 && !memcmp(CH5, T, 8)) FoundMask |= 1 << 5;
-    if (NewSize == 8 && !memcmp(CH6, T, 8)) FoundMask |= 1 << 6;
-    if (NewSize == 8 && !memcmp(CH7, T, 8)) FoundMask |= 1 << 7;
-    if (NewSize == 8 && !memcmp(CH8, T, 8)) FoundMask |= 1 << 8;
-    if (NewSize == 8 && !memcmp(CH9, T, 8)) FoundMask |= 1 << 9;
+    if (NewSize == 8 && !memcmp(CH5, T, 8))
+      FoundMask |= 1 << 5;
+    if (NewSize == 8 && !memcmp(CH6, T, 8))
+      FoundMask |= 1 << 6;
+    if (NewSize == 8 && !memcmp(CH7, T, 8))
+      FoundMask |= 1 << 7;
+    if (NewSize == 8 && !memcmp(CH8, T, 8))
+      FoundMask |= 1 << 8;
+    if (NewSize == 8 && !memcmp(CH9, T, 8))
+      FoundMask |= 1 << 9;
   }
 
   EXPECT_EQ(FoundMask, 1023);
@@ -434,14 +495,22 @@ void TestAddWordFromDictionary(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[7] = {0x00, 0x11, 0x22};
     size_t NewSize = (*MD.*M)(T, 3, 7);
-    if (NewSize == 7 && !memcmp(CH0, T, 7)) FoundMask |= 1 << 0;
-    if (NewSize == 7 && !memcmp(CH1, T, 7)) FoundMask |= 1 << 1;
-    if (NewSize == 7 && !memcmp(CH2, T, 7)) FoundMask |= 1 << 2;
-    if (NewSize == 7 && !memcmp(CH3, T, 7)) FoundMask |= 1 << 3;
-    if (NewSize == 6 && !memcmp(CH4, T, 6)) FoundMask |= 1 << 4;
-    if (NewSize == 6 && !memcmp(CH5, T, 6)) FoundMask |= 1 << 5;
-    if (NewSize == 6 && !memcmp(CH6, T, 6)) FoundMask |= 1 << 6;
-    if (NewSize == 6 && !memcmp(CH7, T, 6)) FoundMask |= 1 << 7;
+    if (NewSize == 7 && !memcmp(CH0, T, 7))
+      FoundMask |= 1 << 0;
+    if (NewSize == 7 && !memcmp(CH1, T, 7))
+      FoundMask |= 1 << 1;
+    if (NewSize == 7 && !memcmp(CH2, T, 7))
+      FoundMask |= 1 << 2;
+    if (NewSize == 7 && !memcmp(CH3, T, 7))
+      FoundMask |= 1 << 3;
+    if (NewSize == 6 && !memcmp(CH4, T, 6))
+      FoundMask |= 1 << 4;
+    if (NewSize == 6 && !memcmp(CH5, T, 6))
+      FoundMask |= 1 << 5;
+    if (NewSize == 6 && !memcmp(CH6, T, 6))
+      FoundMask |= 1 << 6;
+    if (NewSize == 6 && !memcmp(CH7, T, 6))
+      FoundMask |= 1 << 7;
   }
   EXPECT_EQ(FoundMask, 255);
 }
@@ -469,11 +538,16 @@ void TestChangeASCIIInteger(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[8] = {'1', '2', '3', '4', '5', '6', '7', '8'};
     size_t NewSize = (*MD.*M)(T, 8, 8);
-    /**/ if (NewSize == 8 && !memcmp(CH0, T, 8)) FoundMask |= 1 << 0;
-    else if (NewSize == 8 && !memcmp(CH1, T, 8)) FoundMask |= 1 << 1;
-    else if (NewSize == 8 && !memcmp(CH2, T, 8)) FoundMask |= 1 << 2;
-    else if (NewSize == 8 && !memcmp(CH3, T, 8)) FoundMask |= 1 << 3;
-    else if (NewSize == 8)                       FoundMask |= 1 << 4;
+    /**/ if (NewSize == 8 && !memcmp(CH0, T, 8))
+      FoundMask |= 1 << 0;
+    else if (NewSize == 8 && !memcmp(CH1, T, 8))
+      FoundMask |= 1 << 1;
+    else if (NewSize == 8 && !memcmp(CH2, T, 8))
+      FoundMask |= 1 << 2;
+    else if (NewSize == 8 && !memcmp(CH3, T, 8))
+      FoundMask |= 1 << 3;
+    else if (NewSize == 8)
+      FoundMask |= 1 << 4;
   }
   EXPECT_EQ(FoundMask, 31);
 }
@@ -506,27 +580,34 @@ void TestChangeBinaryInteger(Mutator M, int NumIter) {
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
     size_t NewSize = (*MD.*M)(T, 8, 8);
-    /**/ if (NewSize == 8 && !memcmp(CH0, T, 8)) FoundMask |= 1 << 0;
-    else if (NewSize == 8 && !memcmp(CH1, T, 8)) FoundMask |= 1 << 1;
-    else if (NewSize == 8 && !memcmp(CH2, T, 8)) FoundMask |= 1 << 2;
-    else if (NewSize == 8 && !memcmp(CH3, T, 8)) FoundMask |= 1 << 3;
-    else if (NewSize == 8 && !memcmp(CH4, T, 8)) FoundMask |= 1 << 4;
-    else if (NewSize == 8 && !memcmp(CH5, T, 8)) FoundMask |= 1 << 5;
-    else if (NewSize == 8 && !memcmp(CH6, T, 8)) FoundMask |= 1 << 6;
-    else if (NewSize == 8 && !memcmp(CH7, T, 8)) FoundMask |= 1 << 7;
+    /**/ if (NewSize == 8 && !memcmp(CH0, T, 8))
+      FoundMask |= 1 << 0;
+    else if (NewSize == 8 && !memcmp(CH1, T, 8))
+      FoundMask |= 1 << 1;
+    else if (NewSize == 8 && !memcmp(CH2, T, 8))
+      FoundMask |= 1 << 2;
+    else if (NewSize == 8 && !memcmp(CH3, T, 8))
+      FoundMask |= 1 << 3;
+    else if (NewSize == 8 && !memcmp(CH4, T, 8))
+      FoundMask |= 1 << 4;
+    else if (NewSize == 8 && !memcmp(CH5, T, 8))
+      FoundMask |= 1 << 5;
+    else if (NewSize == 8 && !memcmp(CH6, T, 8))
+      FoundMask |= 1 << 6;
+    else if (NewSize == 8 && !memcmp(CH7, T, 8))
+      FoundMask |= 1 << 7;
   }
   EXPECT_EQ(FoundMask, 255);
 }
 
 TEST(FuzzerMutate, ChangeBinaryInteger1) {
   TestChangeBinaryInteger(&MutationDispatcher::Mutate_ChangeBinaryInteger,
-                         1 << 12);
+                          1 << 12);
 }
 
 TEST(FuzzerMutate, ChangeBinaryInteger2) {
   TestChangeBinaryInteger(&MutationDispatcher::Mutate, 1 << 15);
 }
-
 
 TEST(FuzzerDictionary, ParseOneDictionaryEntry) {
   Unit U;
@@ -572,8 +653,7 @@ TEST(FuzzerDictionary, ParseDictionaryFile) {
   EXPECT_EQ(Units, Vector<Unit>({Unit({'a', 'a'})}));
   EXPECT_TRUE(
       ParseDictionaryFile("  #zzzz\naaa=\"aa\"\n\nabc=\"abc\"", &Units));
-  EXPECT_EQ(Units,
-            Vector<Unit>({Unit({'a', 'a'}), Unit({'a', 'b', 'c'})}));
+  EXPECT_EQ(Units, Vector<Unit>({Unit({'a', 'a'}), Unit({'a', 'b', 'c'})}));
 }
 
 TEST(FuzzerUtil, Base64) {
@@ -595,7 +675,7 @@ TEST(Corpus, Distribution) {
   struct EntropicOptions Entropic = {false, 0xFF, 100, false};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
   size_t N = 10;
-  size_t TriesPerUnit = 1<<16;
+  size_t TriesPerUnit = 1 << 16;
   for (size_t i = 0; i < N; i++)
     C->AddToCorpus(Unit{static_cast<uint8_t>(i)}, /*NumFeatures*/ 1,
                    /*MayDeleteFile*/ false, /*HasFocusFunction*/ false,
@@ -871,19 +951,19 @@ TEST(DFT, BlockCoverage) {
   // Add C0
   EXPECT_TRUE(Cov.AppendCoverage("C0 5\n"));
   EXPECT_EQ(Cov.GetCounter(0, 0), 1U);
-  EXPECT_EQ(Cov.GetCounter(0, 1), 0U);  // not seen this BB yet.
-  EXPECT_EQ(Cov.GetCounter(0, 5), 0U);  // BB ID out of bounds.
-  EXPECT_EQ(Cov.GetCounter(1, 0), 0U);  // not seen this function yet.
+  EXPECT_EQ(Cov.GetCounter(0, 1), 0U); // not seen this BB yet.
+  EXPECT_EQ(Cov.GetCounter(0, 5), 0U); // BB ID out of bounds.
+  EXPECT_EQ(Cov.GetCounter(1, 0), 0U); // not seen this function yet.
 
   EXPECT_EQ(Cov.GetNumberOfBlocks(0), 5U);
   EXPECT_EQ(Cov.GetNumberOfCoveredBlocks(0), 1U);
   EXPECT_EQ(Cov.GetNumberOfBlocks(1), 0U);
 
   // Various errors.
-  EXPECT_FALSE(Cov.AppendCoverage("C0\n"));  // No total number.
-  EXPECT_FALSE(Cov.AppendCoverage("C0 7\n"));  // No total number.
-  EXPECT_FALSE(Cov.AppendCoverage("CZ\n"));  // Wrong function number.
-  EXPECT_FALSE(Cov.AppendCoverage("C1 7 7"));  // BB ID is too big.
+  EXPECT_FALSE(Cov.AppendCoverage("C0\n"));     // No total number.
+  EXPECT_FALSE(Cov.AppendCoverage("C0 7\n"));   // No total number.
+  EXPECT_FALSE(Cov.AppendCoverage("CZ\n"));     // Wrong function number.
+  EXPECT_FALSE(Cov.AppendCoverage("C1 7 7"));   // BB ID is too big.
   EXPECT_FALSE(Cov.AppendCoverage("C1 100 7")); // BB ID is too big.
 
   // Add C0 more times.
@@ -954,21 +1034,14 @@ TEST(DFT, FunctionWeights) {
   EXPECT_GT(Weights[1], Weights[0]);
 }
 
-
 TEST(Fuzzer, ForEachNonZeroByte) {
   const size_t N = 64;
   alignas(64) uint8_t Ar[N + 8] = {
-    0, 0, 0, 0, 0, 0, 0, 0,
-    1, 2, 0, 0, 0, 0, 0, 0,
-    0, 0, 3, 0, 4, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 5, 0, 6, 0, 0,
-    0, 0, 0, 0, 0, 0, 7, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 8,
-    9, 9, 9, 9, 9, 9, 9, 9,
+      0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 9, 9, 9, 9, 9, 9, 9,
   };
-  typedef Vector<std::pair<size_t, uint8_t> > Vec;
+  typedef Vector<std::pair<size_t, uint8_t>> Vec;
   Vec Res, Expected;
   auto CB = [&](size_t FirstFeature, size_t Idx, uint8_t V) {
     Res.push_back({FirstFeature + Idx, V});
@@ -980,14 +1053,13 @@ TEST(Fuzzer, ForEachNonZeroByte) {
 
   Res.clear();
   ForEachNonZeroByte(Ar + 9, Ar + N, 109, CB);
-  Expected = {          {109, 2}, {118, 3}, {120, 4},
-              {135, 5}, {137, 6}, {146, 7}, {163, 8}};
+  Expected = {{109, 2}, {118, 3}, {120, 4}, {135, 5},
+              {137, 6}, {146, 7}, {163, 8}};
   EXPECT_EQ(Res, Expected);
 
   Res.clear();
   ForEachNonZeroByte(Ar + 9, Ar + N - 9, 109, CB);
-  Expected = {          {109, 2}, {118, 3}, {120, 4},
-              {135, 5}, {137, 6}, {146, 7}};
+  Expected = {{109, 2}, {118, 3}, {120, 4}, {135, 5}, {137, 6}, {146, 7}};
   EXPECT_EQ(Res, Expected);
 }
 

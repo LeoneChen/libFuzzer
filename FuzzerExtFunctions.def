@@ -16,12 +16,11 @@
 // Optional user functions
 EXT_FUNC(LLVMFuzzerInitialize, int, (int *argc, char ***argv), false);
 EXT_FUNC(LLVMFuzzerCustomMutator, size_t,
-         (uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed),
+         (uint8_t * Data, size_t Size, size_t MaxSize, unsigned int Seed),
          false);
 EXT_FUNC(LLVMFuzzerCustomCrossOver, size_t,
-         (const uint8_t *Data1, size_t Size1,
-          const uint8_t *Data2, size_t Size2,
-          uint8_t *Out, size_t MaxOutSize, unsigned int Seed),
+         (const uint8_t *Data1, size_t Size1, const uint8_t *Data2,
+          size_t Size2, uint8_t *Out, size_t MaxOutSize, unsigned int Seed),
          false);
 
 // Sanitizer functions
@@ -40,10 +39,11 @@ EXT_FUNC(__sanitizer_print_stack_trace, void, (), true);
 EXT_FUNC(__sanitizer_symbolize_pc, void,
          (void *, const char *fmt, char *out_buf, size_t out_buf_size), false);
 EXT_FUNC(__sanitizer_get_module_and_offset_for_pc, int,
-         (void *pc, char *module_path,
-         size_t module_path_len,void **pc_offset), false);
+         (void *pc, char *module_path, size_t module_path_len,
+          void **pc_offset),
+         false);
 EXT_FUNC(__sanitizer_set_death_callback, void, (void (*)(void)), true);
-EXT_FUNC(__sanitizer_set_report_fd, void, (void*), false);
+EXT_FUNC(__sanitizer_set_report_fd, void, (void *), false);
 EXT_FUNC(__msan_scoped_disable_interceptor_checks, void, (), false);
 EXT_FUNC(__msan_scoped_enable_interceptor_checks, void, (), false);
 EXT_FUNC(__msan_unpoison, void, (const volatile void *, size_t size), false);
