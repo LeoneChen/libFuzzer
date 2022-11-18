@@ -126,6 +126,9 @@ public:
   static uintptr_t GetNextInstructionPc(uintptr_t PC);
   bool PcIsFuncEntry(const PCTableEntry *TE) { return TE->PCFlags & 1; }
 
+  void HandleInline8bitCountersUnregister(uint8_t *Start);
+  void HandlePCsUnregister(const uintptr_t *Start);
+
 private:
   bool UseCounters = false;
   uint32_t UseValueProfileMask = false;

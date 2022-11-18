@@ -534,6 +534,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
     *FoundUniqFeatures = FoundUniqFeaturesOfII;
   PrintPulseAndReportSlowInput(Data, Size);
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
+  bool ret = false;
   if (NumNewFeatures || ForceAddToCorpus) {
     TPC.UpdateObservedPCs();
     auto NewII =
@@ -544,7 +545,8 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                           NewII->UniqFeatureSet);
     WriteEdgeToMutationGraphFile(Options.MutationGraphFile, NewII, II,
                                  MD.MutationSequence());
-    return true;
+    ret = true;
+    goto exit;
   }
   if (II && FoundUniqFeaturesOfII &&
       II->DataFlowTraceForFocusFunction.empty() &&
@@ -554,9 +556,14 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
     Corpus.Replace(II, {Data, Data + Size});
     RenameFeatureSetFile(Options.FeaturesDir, OldFeaturesFile,
                          Sha1ToString(II->Sha1));
-    return true;
+    ret = true;
+    goto exit;
   }
-  return false;
+exit:
+  if (EF->LLVMFuzzerEarlyAfterRunOne) {
+    EF->LLVMFuzzerEarlyAfterRunOne();
+  }
+  return ret;
 }
 
 void Fuzzer::TPCUpdateObservedPCs() { TPC.UpdateObservedPCs(); }

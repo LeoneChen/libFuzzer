@@ -40,6 +40,10 @@ extern "C" {
 FUZZER_INTERFACE_VISIBILITY int LLVMFuzzerTestOneInput(const uint8_t *Data,
                                                        size_t Size);
 
+// Called just after RunOne returned, and libFuzzer already collects necessary
+// informations
+FUZZER_INTERFACE_VISIBILITY void LLVMFuzzerEarlyAfterRunOne();
+
 // Optional user-provided initialization function.
 // If provided, this function will be called by libFuzzer once at startup.
 // It may read and modify argc/argv.
