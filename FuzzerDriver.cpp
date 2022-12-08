@@ -859,8 +859,12 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     for (auto &Path : *Inputs) {
       auto StartTime = system_clock::now();
       Printf("Running: %s\n", Path.c_str());
-      for (int Iter = 0; Iter < Runs; Iter++)
+      for (int Iter = 0; Iter < Runs; Iter++) {
         RunOneTest(F, Path.c_str(), Options.MaxLen);
+        if (EF->LLVMFuzzerEarlyAfterRunOne) {
+          EF->LLVMFuzzerEarlyAfterRunOne();
+        }
+      }
       auto StopTime = system_clock::now();
       auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
       Printf("Executed %s in %zd ms\n", Path.c_str(), (long)MS);
