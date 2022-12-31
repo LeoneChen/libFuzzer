@@ -79,7 +79,7 @@ struct FuzzJob {
 
   ~FuzzJob() {
     RemoveFile(CFPath);
-    RemoveFile(LogPath);
+    // RemoveFile(LogPath);
     RemoveFile(SeedListPath);
     RmDirRecursive(CorpusDir);
     RmDirRecursive(FeaturesDir);
@@ -405,7 +405,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
 
   // The workers have terminated. Don't try to remove the directory before they
   // terminate to avoid a race condition preventing cleanup on Windows.
-  RmDirRecursive(Env.TempDir);
+  // RmDirRecursive(Env.TempDir);
 
   // Use the exit code from the last child process.
   Printf("INFO: exiting: %d time: %zds\n", ExitCode,
