@@ -249,7 +249,7 @@ void Fuzzer::ExitCallback() {
   Printf("==%lu== ERROR: libFuzzer: fuzz target exited\n", GetPid());
   PrintStackTrace();
   Printf("SUMMARY: libFuzzer: fuzz target exited\n");
-  DumpCurrentUnit("crash-");
+  DumpCurrentUnit("crash-exit-");
   PrintFinalStats();
   _Exit(Options.ErrorExitCode);
 }
