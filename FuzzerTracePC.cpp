@@ -66,6 +66,25 @@ void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
   NumInline8bitCounters += M.Size();
 }
 
+void TracePC::HandleInline8bitCountersUnregister(uint8_t *Start) {
+  for (size_t i = 0; i < NumModules; i++) {
+    auto &M = Modules[i];
+    if (M.Start() == Start) {
+      // Found the corresponding Module
+      delete[] M.Regions;
+      M.Regions = nullptr;
+
+      // Move the following items to current position
+      size_t cntToMove = NumModules - 1 - i;
+      if (cntToMove > 0) {
+        memmove(&Modules[i], &Modules[i + 1], cntToMove * sizeof(Modules[i]));
+      }
+      NumModules--;
+      break;
+    }
+  }
+}
+
 void TracePC::HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop) {
   const PCTableEntry *B = reinterpret_cast<const PCTableEntry *>(Start);
   const PCTableEntry *E = reinterpret_cast<const PCTableEntry *>(Stop);
@@ -74,6 +93,23 @@ void TracePC::HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop) {
   assert(NumPCTables < sizeof(ModulePCTable) / sizeof(ModulePCTable[0]));
   ModulePCTable[NumPCTables++] = {B, E};
   NumPCsInPCTables += E - B;
+}
+
+void TracePC::HandlePCsUnregister(const uintptr_t *Start) {
+  const PCTableEntry *B = reinterpret_cast<const PCTableEntry *>(Start);
+  for (size_t i = 0; i < NumPCTables; i++) {
+    if (ModulePCTable[i].Start == B) {
+      // Found the corresponding PC
+      // Move the following items to current position
+      size_t cntToMove = NumPCTables - 1 - i;
+      if (cntToMove > 0) {
+        memmove(&ModulePCTable[i], &ModulePCTable[i + 1],
+                cntToMove * sizeof(ModulePCTable[i]));
+      }
+      NumPCTables--;
+      break;
+    }
+  }
 }
 
 void TracePC::PrintModuleInfo() {
@@ -468,9 +504,19 @@ void __sanitizer_cov_8bit_counters_init(uint8_t *Start, uint8_t *Stop) {
 }
 
 ATTRIBUTE_INTERFACE
+void __sanitizer_cov_8bit_counters_unregister(uint8_t *Start) {
+  fuzzer::TPC.HandleInline8bitCountersUnregister(Start);
+}
+
+ATTRIBUTE_INTERFACE
 void __sanitizer_cov_pcs_init(const uintptr_t *pcs_beg,
                               const uintptr_t *pcs_end) {
   fuzzer::TPC.HandlePCsInit(pcs_beg, pcs_end);
+}
+
+ATTRIBUTE_INTERFACE
+void __sanitizer_cov_pcs_unregister(const uintptr_t *pcs_beg) {
+  fuzzer::TPC.HandlePCsUnregister(pcs_beg);
 }
 
 ATTRIBUTE_INTERFACE
