@@ -439,6 +439,35 @@ void WarnAboutDeprecatedInstrumentation(const char *flag) {
 } // namespace fuzzer
 
 extern "C" {
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_TARGET_POPCNT
+void __sanitizer_cov_handle_cmp1(uintptr_t PC, uint8_t Arg1, uint8_t Arg2) {
+  fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_TARGET_POPCNT
+void __sanitizer_cov_handle_cmp2(uintptr_t PC, uint16_t Arg1, uint16_t Arg2) {
+  fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_TARGET_POPCNT
+void __sanitizer_cov_handle_cmp4(uintptr_t PC, uint32_t Arg1, uint32_t Arg2) {
+  fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_TARGET_POPCNT
+void __sanitizer_cov_handle_cmp8(uintptr_t PC, uint64_t Arg1, uint64_t Arg2) {
+  fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
 ATTRIBUTE_INTERFACE
 ATTRIBUTE_NO_SANITIZE_ALL
 void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
