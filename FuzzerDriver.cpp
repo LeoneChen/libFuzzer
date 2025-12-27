@@ -330,7 +330,11 @@ int RunOneTest(Fuzzer *F, const char *InputFilePath, size_t MaxLen) {
   if (Flags.print_full_coverage) {
     // Leak detection is not needed when collecting full coverage data.
     F->TPCUpdateObservedPCs();
+    if (EF->LLVMFuzzerEarlyAfterRunOne)
+      EF->LLVMFuzzerEarlyAfterRunOne();
   } else {
+    if (EF->LLVMFuzzerEarlyAfterRunOne)
+      EF->LLVMFuzzerEarlyAfterRunOne();
     F->TryDetectingAMemoryLeak(U.data(), U.size(), true);
   }
   return 0;
@@ -555,6 +559,8 @@ int AnalyzeDictionary(Fuzzer *F, const Vector<Unit> &Dict, UnitVector &Corpus) {
     InitialFeatures.clear();
     TPC.CollectFeatures(
         [&](size_t Feature) { InitialFeatures.push_back(Feature); });
+    if (EF->LLVMFuzzerEarlyAfterRunOne)
+      EF->LLVMFuzzerEarlyAfterRunOne();
 
     for (size_t i = 0; i < Dict.size(); ++i) {
       Vector<uint8_t> Data = C;
@@ -580,6 +586,8 @@ int AnalyzeDictionary(Fuzzer *F, const Vector<Unit> &Dict, UnitVector &Corpus) {
       ModifiedFeatures.clear();
       TPC.CollectFeatures(
           [&](size_t Feature) { ModifiedFeatures.push_back(Feature); });
+      if (EF->LLVMFuzzerEarlyAfterRunOne)
+        EF->LLVMFuzzerEarlyAfterRunOne();
 
       if (InitialFeatures == ModifiedFeatures)
         --Scores[i];
@@ -873,8 +881,12 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  if (Flags.fork)
+  if (Flags.fork) {
+    F->SetFuzzingThread(false);
     FuzzWithFork(F->GetMD().GetRand(), Options, Args, *Inputs, Flags.fork);
+    // Shouldn't reach here
+    F->SetFuzzingThread(true);
+  }
 
   if (Flags.merge)
     Merge(F, Options, Args, *Inputs, Flags.merge_control_file);

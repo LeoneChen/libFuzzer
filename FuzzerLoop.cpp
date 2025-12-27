@@ -17,9 +17,11 @@
 #include "FuzzerTracePC.h"
 #include <algorithm>
 #include <cstring>
+#include <fcntl.h>
 #include <memory>
 #include <mutex>
 #include <set>
+#include <unistd.h>
 
 #if defined(__has_include)
 #if __has_include(<sanitizer / lsan_interface.h>)
@@ -129,7 +131,7 @@ void Fuzzer::HandleMalloc(size_t Size) {
          Size);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintStackTrace();
-  DumpCurrentUnit("oom-");
+  SignalSafeDumpCurrentUnit("oom-");
   Printf("SUMMARY: libFuzzer: out-of-memory\n");
   PrintFinalStats();
   _Exit(Options.OOMExitCode); // Stop right now.
@@ -173,6 +175,122 @@ void Fuzzer::StaticDeathCallback() {
   F->DeathCallback();
 }
 
+/// @brief
+/// @param Sha1
+/// @param Out (2 * kSHA1NumBytes + 1) size
+/// @return
+char *SignalSafeSha1ToString(const uint8_t Sha1[kSHA1NumBytes], char *Out) {
+  for (int i = 0; i < kSHA1NumBytes; i++) {
+    sprintf(Out + (2 * i), "%02x", Sha1[i]);
+  }
+  Out[2 * kSHA1NumBytes] = '\0';
+  return Out;
+}
+
+/// @brief
+/// @param Data
+/// @param Len
+/// @param Out (2 * kSHA1NumBytes + 1) size
+/// @return
+char *SignalSafeHash(const uint8_t *Data, size_t Len, char *Out) {
+  uint8_t Hash[kSHA1NumBytes];
+  ComputeSHA1(Data, Len, Hash);
+  return SignalSafeSha1ToString(Hash, Out);
+}
+
+void SignalSafeWriteToFile(const uint8_t *Data, size_t Size, char *Path) {
+  // Use raw C interface because this function may be called from a sig handler.
+  int Out = open(Path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (Out == -1)
+    return;
+  ssize_t totalBytesWritten = 0;
+  ssize_t bytesWritten;
+  while (totalBytesWritten < Size) {
+    bytesWritten =
+        write(Out, Data + totalBytesWritten, Size - totalBytesWritten);
+    if (bytesWritten == -1) {
+      close(Out);
+      return;
+    }
+    totalBytesWritten += bytesWritten;
+  }
+  close(Out);
+}
+
+/// @brief
+/// @param Data
+/// @param Size
+/// @param Buffer (((Size + 2) / 3) * 4 + 1) size
+/// @return
+char *SignalSafeBase64(const uint8_t *Data, size_t Size, char *Buffer) {
+  static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                              "abcdefghijklmnopqrstuvwxyz"
+                              "0123456789+/";
+  size_t i = 0, j = 0;
+  for (size_t n = Size / 3 * 3; i < n; i += 3, j += 4) {
+    uint32_t x = ((unsigned char)Data[i] << 16) |
+                 ((unsigned char)Data[i + 1] << 8) | (unsigned char)Data[i + 2];
+    Buffer[j + 0] = Table[(x >> 18) & 63];
+    Buffer[j + 1] = Table[(x >> 12) & 63];
+    Buffer[j + 2] = Table[(x >> 6) & 63];
+    Buffer[j + 3] = Table[x & 63];
+  }
+  if (i + 1 == Size) {
+    uint32_t x = ((unsigned char)Data[i] << 16);
+    Buffer[j + 0] = Table[(x >> 18) & 63];
+    Buffer[j + 1] = Table[(x >> 12) & 63];
+    Buffer[j + 2] = '=';
+    Buffer[j + 3] = '=';
+  } else if (i + 2 == Size) {
+    uint32_t x =
+        ((unsigned char)Data[i] << 16) | ((unsigned char)Data[i + 1] << 8);
+    Buffer[j + 0] = Table[(x >> 18) & 63];
+    Buffer[j + 1] = Table[(x >> 12) & 63];
+    Buffer[j + 2] = Table[(x >> 6) & 63];
+    Buffer[j + 3] = '=';
+  }
+  Buffer[((Size + 2) / 3) * 4] = '\0';
+  return Buffer;
+}
+
+void Fuzzer::SignalSafeDumpCurrentUnit(const char *Prefix) {
+  if (!CurrentUnitData)
+    return; // Happens when running individual inputs.
+  ScopedDisableMsanInterceptorChecks S;
+  MD.PrintMutationSequence();
+  char BaseSha1CStr[2 * kSHA1NumBytes + 1];
+  Printf("; base unit: %s\n", SignalSafeSha1ToString(BaseSha1, BaseSha1CStr));
+  size_t UnitSize = CurrentUnitSize;
+  if (UnitSize <= kMaxUnitSizeToPrint) {
+    PrintHexArray(CurrentUnitData, UnitSize, "\n");
+    PrintASCII(CurrentUnitData, UnitSize, "\n");
+  }
+
+  if (!Options.SaveArtifacts)
+    return;
+  char Path[BUFSIZ];
+  strncpy(Path, Options.ArtifactPrefix.c_str(), BUFSIZ - 1);
+  Path[std::min(strlen(Options.ArtifactPrefix.c_str()), (size_t)(BUFSIZ - 1))] =
+      '\0';
+  strncat(Path, Prefix, BUFSIZ - 1 - strlen(Path));
+  char HashCStr[2 * kSHA1NumBytes + 1];
+  strncat(Path, SignalSafeHash(CurrentUnitData, UnitSize, HashCStr),
+          BUFSIZ - 1 - strlen(Path));
+  Path[BUFSIZ - 1] = '\0';
+  if (!Options.ExactArtifactPath.empty()) {
+    // Overrides ArtifactPrefix.
+    strncpy(Path, Options.ArtifactPrefix.c_str(), BUFSIZ - 1);
+    Path[BUFSIZ - 1] = '\0';
+  }
+  SignalSafeWriteToFile(CurrentUnitData, UnitSize, Path);
+  Printf("artifact_prefix='%s'; Test unit written to %s\n",
+         Options.ArtifactPrefix.c_str(), Path);
+  if (UnitSize <= kMaxUnitSizeToPrint) {
+    char Buffer[((UnitSize + 2) / 3) * 4 + 1];
+    Printf("Base64: %s\n", SignalSafeBase64(CurrentUnitData, UnitSize, Buffer));
+  }
+}
+
 void Fuzzer::DumpCurrentUnit(const char *Prefix) {
   if (!CurrentUnitData)
     return; // Happens when running individual inputs.
@@ -188,10 +306,13 @@ void Fuzzer::DumpCurrentUnit(const char *Prefix) {
                             Prefix);
 }
 
+extern "C" __attribute__((weak)) void libFuzzerCrashCallback();
 NO_SANITIZE_MEMORY
 void Fuzzer::DeathCallback() {
-  DumpCurrentUnit("crash-");
+  SignalSafeDumpCurrentUnit("crash-");
   PrintFinalStats();
+  if (libFuzzerCrashCallback)
+    libFuzzerCrashCallback();
 }
 
 void Fuzzer::StaticAlarmCallback() {
@@ -235,8 +356,10 @@ void Fuzzer::CrashCallback() {
          "      Combine libFuzzer with AddressSanitizer or similar for better "
          "crash reports.\n");
   Printf("SUMMARY: libFuzzer: deadly signal\n");
-  DumpCurrentUnit("crash-");
+  SignalSafeDumpCurrentUnit("crash-");
   PrintFinalStats();
+  if (libFuzzerCrashCallback)
+    libFuzzerCrashCallback();
   _Exit(Options.ErrorExitCode); // Stop right now.
 }
 
@@ -249,8 +372,10 @@ void Fuzzer::ExitCallback() {
   Printf("==%lu== ERROR: libFuzzer: fuzz target exited\n", GetPid());
   PrintStackTrace();
   Printf("SUMMARY: libFuzzer: fuzz target exited\n");
-  DumpCurrentUnit("crash-");
+  SignalSafeDumpCurrentUnit("crash-exit-");
   PrintFinalStats();
+  if (libFuzzerCrashCallback)
+    libFuzzerCrashCallback();
   _Exit(Options.ErrorExitCode);
 }
 
@@ -260,12 +385,16 @@ void Fuzzer::MaybeExitGracefully() {
   Printf("==%lu== INFO: libFuzzer: exiting as requested\n", GetPid());
   RmDirRecursive(TempPath("FuzzWithFork", ".dir"));
   F->PrintFinalStats();
+  if (libFuzzerCrashCallback)
+    libFuzzerCrashCallback();
   _Exit(0);
 }
 
 void Fuzzer::InterruptCallback() {
   Printf("==%lu== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();
+  if (libFuzzerCrashCallback)
+    libFuzzerCrashCallback();
   ScopedDisableMsanInterceptorChecks S; // RmDirRecursive may call opendir().
   RmDirRecursive(TempPath("FuzzWithFork", ".dir"));
   // Stop right now, don't perform any at-exit actions.
@@ -281,8 +410,6 @@ void Fuzzer::AlarmCallback() {
   if (!InFuzzingThread())
     return;
 #endif
-  if (!RunningUserCallback)
-    return; // We have not started running units yet.
   size_t Seconds =
       duration_cast<seconds>(system_clock::now() - UnitStartTime).count();
   if (Seconds == 0)
@@ -290,13 +417,10 @@ void Fuzzer::AlarmCallback() {
   if (Options.Verbosity >= 2)
     Printf("AlarmCallback %zd\n", Seconds);
   if (Seconds >= (size_t)Options.UnitTimeoutSec) {
-    if (EF->__sanitizer_acquire_crash_state &&
-        !EF->__sanitizer_acquire_crash_state())
-      return;
     Printf("ALARM: working on the last Unit for %zd seconds\n", Seconds);
     Printf("       and the timeout value is %d (use -timeout=N to change)\n",
            Options.UnitTimeoutSec);
-    DumpCurrentUnit("timeout-");
+    SignalSafeDumpCurrentUnit("timeout-");
     Printf("==%lu== ERROR: libFuzzer: timeout after %d seconds\n", GetPid(),
            Seconds);
     PrintStackTrace();
@@ -315,9 +439,11 @@ void Fuzzer::RssLimitCallback() {
       GetPid(), GetPeakRSSMb(), Options.RssLimitMb);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintMemoryProfile();
-  DumpCurrentUnit("oom-");
+  SignalSafeDumpCurrentUnit("oom-");
   Printf("SUMMARY: libFuzzer: out-of-memory\n");
   PrintFinalStats();
+  if (libFuzzerCrashCallback)
+    libFuzzerCrashCallback();
   _Exit(Options.OOMExitCode); // Stop right now.
 }
 
@@ -534,6 +660,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
     *FoundUniqFeatures = FoundUniqFeaturesOfII;
   PrintPulseAndReportSlowInput(Data, Size);
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
+  bool ret = false;
   if (NumNewFeatures || ForceAddToCorpus) {
     TPC.UpdateObservedPCs();
     auto NewII =
@@ -544,7 +671,8 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                           NewII->UniqFeatureSet);
     WriteEdgeToMutationGraphFile(Options.MutationGraphFile, NewII, II,
                                  MD.MutationSequence());
-    return true;
+    ret = true;
+    goto exit;
   }
   if (II && FoundUniqFeaturesOfII &&
       II->DataFlowTraceForFocusFunction.empty() &&
@@ -554,9 +682,14 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
     Corpus.Replace(II, {Data, Data + Size});
     RenameFeatureSetFile(Options.FeaturesDir, OldFeaturesFile,
                          Sha1ToString(II->Sha1));
-    return true;
+    ret = true;
+    goto exit;
   }
-  return false;
+exit:
+  if (EF->LLVMFuzzerEarlyAfterRunOne) {
+    EF->LLVMFuzzerEarlyAfterRunOne();
+  }
+  return ret;
 }
 
 void Fuzzer::TPCUpdateObservedPCs() { TPC.UpdateObservedPCs(); }
@@ -572,7 +705,7 @@ void Fuzzer::CrashOnOverwrittenData() {
          GetPid());
   PrintStackTrace();
   Printf("SUMMARY: libFuzzer: overwrites-const-input\n");
-  DumpCurrentUnit("crash-");
+  SignalSafeDumpCurrentUnit("crash-");
   PrintFinalStats();
   _Exit(Options.ErrorExitCode); // Stop right now.
 }
@@ -688,6 +821,8 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
   // a real leak we do not report it twice.
   EF->__lsan_disable();
   ExecuteCallback(Data, Size);
+  if (EF->LLVMFuzzerEarlyAfterRunOne)
+    EF->LLVMFuzzerEarlyAfterRunOne();
   EF->__lsan_enable();
   if (!HasMoreMallocsThanFrees)
     return; // a leak is unlikely.
@@ -709,7 +844,7 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
       Printf("\nINFO: a leak has been found in the initial corpus.\n\n");
     Printf("INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.\n\n");
     CurrentUnitSize = Size;
-    DumpCurrentUnit("leak-");
+    SignalSafeDumpCurrentUnit("leak-");
     PrintFinalStats();
     _Exit(Options.ErrorExitCode); // not exit() to disable lsan further on.
   }
@@ -803,12 +938,16 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
   assert(MaxInputLen > 0);
 
   // Test the callback with empty input and never try it again.
-  uint8_t dummy = 0;
-  ExecuteCallback(&dummy, 0);
+  // uint8_t dummy = 0;
+  // ExecuteCallback(&dummy, 0); // Remove empty input
 
   if (CorporaFiles.empty()) {
-    Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
-    Unit U({'\n'}); // Valid ASCII input.
+    Printf("INFO: A corpus is not provided, starting from a random corpus\n");
+    Unit U(rand() % std::min((size_t)65536, MaxInputLen)); // Valid ASCII input.
+    std::random_device rd;
+    std::independent_bits_engine<std::mt19937, CHAR_BIT, unsigned short> ibe(
+        rd());
+    std::generate(U.data(), U.data() + U.size(), std::ref(ibe));
     RunOne(U.data(), U.size());
   } else {
     Printf("INFO: seed corpus: files: %zd min: %zdb max: %zdb total: %zdb"
@@ -914,6 +1053,8 @@ void Fuzzer::MinimizeCrashLoop(const Unit &U) {
       size_t NewSize = MD.Mutate(CurrentUnitData, U.size(), MaxMutationLen);
       assert(NewSize > 0 && NewSize <= MaxMutationLen);
       ExecuteCallback(CurrentUnitData, NewSize);
+      if (EF->LLVMFuzzerEarlyAfterRunOne)
+        EF->LLVMFuzzerEarlyAfterRunOne();
       PrintPulseAndReportSlowInput(CurrentUnitData, NewSize);
       TryDetectingAMemoryLeak(CurrentUnitData, NewSize,
                               /*DuringInitialCorpusExecution*/ false);
