@@ -79,6 +79,7 @@ public:
   void SetMaxMutationLen(size_t MaxMutationLen);
   void RssLimitCallback();
 
+  void SetFuzzingThread(bool flag) { IsMyThread = flag; }
   bool InFuzzingThread() const { return IsMyThread; }
   size_t GetCurrentUnitInFuzzingThead(const uint8_t **Data) const;
   void TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,

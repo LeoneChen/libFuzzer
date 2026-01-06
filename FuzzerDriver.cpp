@@ -873,8 +873,13 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  if (Flags.fork)
+  if (Flags.fork) {
+    F->SetFuzzingThread(false);
     FuzzWithFork(F->GetMD().GetRand(), Options, Args, *Inputs, Flags.fork);
+    // Shouldn't reach here
+    Printf("FuzzWithFork returned unexpectedly\n");
+    abort();
+  }
 
   if (Flags.merge)
     Merge(F, Options, Args, *Inputs, Flags.merge_control_file);
